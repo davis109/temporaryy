@@ -48,7 +48,38 @@ POSE_ORDER = [
     "Pranamasana"
 ]
 
-# Corrections dictionary (from correc.py)
+# Angle-based corrections dictionary (from correc.py)
+POSE_CORRECTIONS_ANGLES = {
+    "pranamasana": {
+        "elbow_angle": (170, 190, "Keep arms straight together"),
+    },
+    "hasta_utthanasana": {
+        "elbow_angle": (170, 190, "Arms straight up"),
+        "back_angle": (190, 230, "Arch back slightly"),
+    },
+    "padahastasana": {
+        "hip_angle": (50, 100, "Bend forward fully"),
+    },
+    "ashwa_sanchalanasana": {
+        "front_knee": (80, 100, "Bend front knee to ~90°"),
+        "back_leg": (160, 190, "Keep back leg straight"),
+    },
+    "kumbhakasana": {
+        "body_line": (160, 180, "Keep body straight like plank"),
+    },
+    "ashtanga_namaskara": {
+        "elbow_angle": (80, 110, "Bend elbows ~90°"),
+    },
+    "bhujangasana": {
+        "back_angle": (90, 120, "Lift chest higher"),
+        "elbow_angle": (160, 190, "Keep arms straight"),
+    },
+    "adho_mukh_svanasana": {
+        "hip_angle": (70, 110, "Push hips up to form inverted V"),
+    },
+}
+
+# Basic descriptions for fallback
 POSE_CORRECTIONS = {
     "Pranamasana": {
         "description": "Prayer Pose - Stand with palms together at chest",
@@ -128,7 +159,7 @@ def extract_features(landmarks):
     return np.array(features).reshape(1, -1)
 
 def calculate_angle(a, b, c):
-    """Calculate angle between three points"""
+    """Calculate angle between three points (from correc.py)"""
     a = np.array([a.x, a.y])
     b = np.array([b.x, b.y])
     c = np.array([c.x, c.y])
@@ -140,6 +171,70 @@ def calculate_angle(a, b, c):
         angle = 360 - angle
     
     return angle
+
+def check_pose_corrections(pose_name, landmarks):
+    """
+    Check angle-based corrections for a pose (from correc.py)
+    Returns list of correction feedback messages
+    """
+    pose_name_norm = pose_name.lower().replace(" ", "_")
+    
+    if pose_name_norm not in POSE_CORRECTIONS_ANGLES:
+        return []
+    
+    feedback = []
+    lm = landmarks.landmark
+    
+    for check, (low, high, message) in POSE_CORRECTIONS_ANGLES[pose_name_norm].items():
+        angle = None
+        
+        try:
+            if check == "elbow_angle":
+                angle = calculate_angle(
+                    lm[mp_pose.PoseLandmark.LEFT_SHOULDER.value],
+                    lm[mp_pose.PoseLandmark.LEFT_ELBOW.value],
+                    lm[mp_pose.PoseLandmark.LEFT_WRIST.value]
+                )
+            elif check == "front_knee":
+                angle = calculate_angle(
+                    lm[mp_pose.PoseLandmark.LEFT_HIP.value],
+                    lm[mp_pose.PoseLandmark.LEFT_KNEE.value],
+                    lm[mp_pose.PoseLandmark.LEFT_ANKLE.value]
+                )
+            elif check == "hip_angle":
+                angle = calculate_angle(
+                    lm[mp_pose.PoseLandmark.LEFT_SHOULDER.value],
+                    lm[mp_pose.PoseLandmark.LEFT_HIP.value],
+                    lm[mp_pose.PoseLandmark.LEFT_ANKLE.value]
+                )
+            elif check == "back_angle":
+                angle = calculate_angle(
+                    lm[mp_pose.PoseLandmark.LEFT_HIP.value],
+                    lm[mp_pose.PoseLandmark.LEFT_SHOULDER.value],
+                    lm[mp_pose.PoseLandmark.LEFT_WRIST.value]
+                )
+            elif check == "body_line":
+                angle = calculate_angle(
+                    lm[mp_pose.PoseLandmark.LEFT_SHOULDER.value],
+                    lm[mp_pose.PoseLandmark.LEFT_HIP.value],
+                    lm[mp_pose.PoseLandmark.LEFT_ANKLE.value]
+                )
+            elif check == "back_leg":
+                angle = calculate_angle(
+                    lm[mp_pose.PoseLandmark.LEFT_HIP.value],
+                    lm[mp_pose.PoseLandmark.LEFT_KNEE.value],
+                    lm[mp_pose.PoseLandmark.LEFT_ANKLE.value]
+                )
+            
+            if angle is not None:
+                if not (low <= angle <= high):
+                    feedback.append(f"{message} (angle: {int(angle)}°)")
+        except Exception as e:
+            print(f"Error calculating {check}: {e}")
+            continue
+    
+    return feedback
+
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -216,8 +311,21 @@ def predict_pose():
         # Capitalize for display
         pose_name_display = " ".join(word.capitalize() for word in pose_name.split())
         
-        # Get corrections
+        # Get angle-based corrections from correc.py logic
+        angle_corrections = check_pose_corrections(pose_name, results.pose_landmarks)
+        
+        # Get basic corrections as fallback
         corrections_info = POSE_CORRECTIONS.get(pose_name_display, {})
+        basic_corrections = corrections_info.get('corrections', [])
+        
+        # Use angle corrections if available, otherwise use basic corrections
+        final_corrections = angle_corrections if angle_corrections else basic_corrections
+        
+        # Add "Good alignment" message if no corrections needed
+        if not angle_corrections and pose_name:
+            alignment_status = "✔ Good Alignment"
+        else:
+            alignment_status = "Adjust your pose"
         
         # Calculate some angles for feedback (example)
         landmarks = results.pose_landmarks.landmark
@@ -228,7 +336,9 @@ def predict_pose():
             'pose_display': pose_name_display,
             'confidence': confidence,
             'description': corrections_info.get('description', ''),
-            'corrections': corrections_info.get('corrections', []),
+            'corrections': final_corrections,
+            'alignment_status': alignment_status,
+            'has_angle_corrections': len(angle_corrections) > 0,
             'landmarks': [[lm.x, lm.y, lm.z, lm.visibility] for lm in landmarks]
         })
         
@@ -250,13 +360,56 @@ def get_poses():
         'total': len(POSE_ORDER)
     })
 
+@app.route('/api/start-correc', methods=['POST'])
+def start_correc():
+    """
+    Launch the correc.py script (Advanced Correction System)
+    This runs the original correction system with OpenCV window
+    """
+    try:
+        import subprocess
+        import sys
+        
+        correc_path = os.path.join(HERE, 'correc.py')
+        
+        if not os.path.exists(correc_path):
+            return jsonify({
+                'success': False,
+                'message': 'correc.py not found'
+            }), 404
+        
+        # Start correc.py as a separate process
+        process = subprocess.Popen(
+            [sys.executable, correc_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Advanced Correction System launched!',
+            'pid': process.pid,
+            'note': 'Check the new window that opened. Press Q to exit.'
+        })
+        
+    except Exception as e:
+        print(f"ERROR starting correc.py: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
 if __name__ == '__main__':
     print("🚀 Starting Suryanamaskara Pose Detection API Server...")
     print("📊 Model loaded successfully!")
     print("🎯 Server running on http://localhost:5000")
     print("\n📝 Available endpoints:")
-    print("   GET  /api/health  - Health check")
-    print("   POST /api/predict - Predict pose from image")
-    print("   GET  /api/poses   - Get all poses in sequence")
+    print("   GET  /api/health       - Health check")
+    print("   POST /api/predict      - Predict pose from image")
+    print("   GET  /api/poses        - Get all poses in sequence")
+    print("   POST /api/start-correc - Launch Advanced Correction System (correc.py)")
     
     app.run(host='0.0.0.0', port=5000, debug=False)

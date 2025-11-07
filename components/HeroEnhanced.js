@@ -244,6 +244,46 @@ export default function HeroEnhanced({ onStartPractice, onStartLearn }) {
           </motion.div>
 
           {/* CTA Buttons */}
+          <div className="flex flex-col md:flex-row gap-6 items-center justify-center mb-8">
+            {/* ADVANCED CORRECTION SYSTEM - MAIN USP */}
+            <motion.button
+              onClick={async () => {
+                try {
+                  const response = await fetch('http://localhost:5000/api/start-correc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    alert('🎯 Advanced Correction System Launched!\n\nA new window has opened with the professional correction system.\n\n✓ Real-time angle-based corrections\n✓ Professional feedback system\n✓ Press Q to exit\n\nMake sure the new window is visible!');
+                  } else {
+                    alert('Error: ' + data.message);
+                  }
+                } catch (error) {
+                  alert('Please make sure the backend server is running:\npython api_server.py');
+                }
+              }}
+              initial={{ opacity: 0, scale: 0.8, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.6 }}
+              whileHover={{ scale: 1.1, boxShadow: '0 0 50px rgba(255, 0, 255, 0.8)' }}
+              whileTap={{ scale: 0.95 }}
+              className="group relative bg-gradient-to-r from-red-500 via-pink-500 to-purple-600 text-white text-3xl md:text-4xl font-black px-20 py-10 rounded-full shadow-2xl hover:shadow-pink-500/80 transition-all overflow-hidden border-4 border-yellow-400 animate-pulse"
+            >
+              <span className="relative z-10 flex items-center gap-4">
+                <Target className="w-12 h-12" />
+                🎯 ADVANCED CORRECTION SYSTEM
+                <Zap className="w-12 h-12" />
+              </span>
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600"
+                initial={{ x: '-100%' }}
+                whileHover={{ x: '0%' }}
+                transition={{ duration: 0.4 }}
+              />
+            </motion.button>
+          </div>
+
           <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
             <motion.button
               onClick={onStartPractice}
