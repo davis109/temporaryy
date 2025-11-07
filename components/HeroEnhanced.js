@@ -477,6 +477,110 @@ export default function HeroEnhanced({ onStartPractice, onStartLearn }) {
               </motion.div>
             ))}
           </div>
+
+          {/* 🎯 ADVANCED CORRECTION SYSTEM HIGHLIGHT */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="mt-16 relative"
+          >
+            <div className="bg-gradient-to-r from-red-600 via-pink-600 to-purple-600 rounded-[3rem] p-1 shadow-2xl">
+              <div className="bg-gradient-to-br from-gray-900 to-black rounded-[2.8rem] p-12 relative overflow-hidden">
+                {/* Animated background effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-red-500/20"
+                  animate={{
+                    backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                  }}
+                  transition={{
+                    duration: 5,
+                    repeat: Infinity,
+                    ease: 'linear'
+                  }}
+                  style={{ backgroundSize: '200% 200%' }}
+                />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <Target className="w-16 h-16 text-yellow-400 animate-pulse" />
+                    <h3 className="text-4xl md:text-6xl font-black text-white text-center">
+                      🎯 ADVANCED CORRECTION SYSTEM
+                    </h3>
+                    <Zap className="w-16 h-16 text-yellow-400 animate-pulse" />
+                  </div>
+                  
+                  <div className="flex items-center justify-center gap-3 mb-8">
+                    <div className="bg-red-500 text-white px-4 py-2 rounded-full font-bold text-lg animate-bounce">
+                      NEW
+                    </div>
+                    <div className="bg-yellow-400 text-black px-4 py-2 rounded-full font-bold text-lg">
+                      PROFESSIONAL MODE
+                    </div>
+                    <div className="bg-green-500 text-white px-4 py-2 rounded-full font-bold text-lg">
+                      ANGLE-BASED
+                    </div>
+                  </div>
+                  
+                  <p className="text-2xl md:text-3xl text-center text-purple-200 mb-8 max-w-5xl mx-auto leading-relaxed">
+                    Experience our <span className="text-yellow-400 font-black">PREMIUM</span> correction system with 
+                    <span className="text-pink-400 font-black"> angle-based analysis</span>, 
+                    <span className="text-cyan-400 font-black"> real-time feedback</span>, and 
+                    <span className="text-green-400 font-black"> professional-grade corrections</span> in a dedicated OpenCV window!
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                    {[
+                      { icon: '📐', label: 'Angle Detection', desc: 'Precise joint angles' },
+                      { icon: '⚡', label: 'Real-time', desc: 'Instant feedback' },
+                      { icon: '🎯', label: 'Professional', desc: 'Studio-quality' },
+                      { icon: '🔄', label: 'Sequential', desc: 'Guided flow' }
+                    ].map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/30"
+                      >
+                        <div className="text-5xl mb-3">{item.icon}</div>
+                        <div className="text-white font-bold text-xl mb-1">{item.label}</div>
+                        <div className="text-purple-300 text-sm">{item.desc}</div>
+                      </motion.div>
+                    ))}
+                  </div>
+                  
+                  <div className="text-center">
+                    <motion.button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch('http://localhost:5000/api/start-correc', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                          });
+                          const data = await response.json();
+                          if (data.success) {
+                            alert('🎯 Advanced Correction System Launched!\n\nA new window has opened with the professional correction system.\n\n✓ Real-time angle-based corrections\n✓ Professional feedback system\n✓ Press Q to exit\n\nMake sure the new window is visible!');
+                          } else {
+                            alert('Error: ' + data.message);
+                          }
+                        } catch (error) {
+                          alert('Please make sure the backend server is running:\npython api_server.py');
+                        }
+                      }}
+                      whileHover={{ scale: 1.1, boxShadow: '0 0 50px rgba(255, 215, 0, 1)' }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600 text-black text-3xl md:text-4xl font-black px-20 py-8 rounded-full shadow-2xl hover:shadow-yellow-500/80 transition-all border-4 border-yellow-300"
+                    >
+                      🚀 LAUNCH ADVANCED MODE
+                    </motion.button>
+                    <p className="text-purple-300 mt-4 text-lg">
+                      Opens in new window • Press Q to exit • Requires camera access
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
 

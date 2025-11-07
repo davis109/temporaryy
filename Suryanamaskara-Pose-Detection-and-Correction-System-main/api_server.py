@@ -371,26 +371,35 @@ def start_correc():
         import sys
         
         correc_path = os.path.join(HERE, 'correc.py')
+        bat_file = os.path.join(HERE, 'run_correc.bat')
         
         if not os.path.exists(correc_path):
             return jsonify({
                 'success': False,
-                'message': 'correc.py not found'
+                'message': f'correc.py not found at {correc_path}'
             }), 404
         
-        # Start correc.py as a separate process
-        process = subprocess.Popen(
-            [sys.executable, correc_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
-        )
+        # For Windows, just launch the batch file - SIMPLEST METHOD
+        if os.name == 'nt':
+            # Double-click the batch file
+            os.startfile(bat_file)
+            pid = "Windows batch"
+        else:
+            # For Unix-like systems
+            python_exe = sys.executable
+            process = subprocess.Popen(
+                [python_exe, correc_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            pid = process.pid
         
         return jsonify({
             'success': True,
-            'message': 'Advanced Correction System launched!',
-            'pid': process.pid,
-            'note': 'Check the new window that opened. Press Q to exit.'
+            'message': '🎯 Advanced Correction System launched!',
+            'pid': pid,
+            'note': 'A new window should open. Press Q in the OpenCV window to exit.',
+            'python_used': sys.executable
         })
         
     except Exception as e:
@@ -399,7 +408,7 @@ def start_correc():
         traceback.print_exc()
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': f'Error: {str(e)}'
         }), 500
 
 if __name__ == '__main__':
